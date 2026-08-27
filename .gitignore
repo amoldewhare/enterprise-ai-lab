@@ -1,0 +1,27 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# IDEs
+.idea/
+.vscode/
+
+# macOS
+.DS_Store
+
+# Local models
+models/qwen/local/
+models/*/weights/
+
+# Private data
+data/private/
+
+# Local evaluation output
+evals/results/local/
