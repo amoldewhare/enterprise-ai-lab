@@ -10,6 +10,6 @@ transfer_case = {
     ],
     "transfer_form": {
         "account_number_present": True,
-        "customer_signature_present": False,
+        "customer_signature_present": True,
     },
 }
