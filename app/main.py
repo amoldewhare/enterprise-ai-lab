@@ -4,20 +4,19 @@ from models.openai.provider import OpenAIProvider
 from app.workflow.approval import request_human_approval
 from app.workflow.processing import submit_transfer_for_processing
 
-def main():
-    provider = OpenAIProvider()
 
+
+def run_transfer_workflow(provider, approval_function, processing_function):
+    
     prompt = build_transfer_review_prompt(transfer_case)
 
     response = provider.generate(prompt)
 
     print("\n===== MODEL RECOMMENDATION =====")
     print(response)
-    
-    # Hard Application Control
-    # A BLOCKED case can never reach human execution approval.
 
-    if response.status == 'BLOCKED':
+    # Hard application control
+    if response.status == "BLOCKED":
         print("\n===== WORKFLOW BLOCKED =====")
         print(f"Policy: {response.policy_id}")
         print(f"Reason: {response.reason}")
@@ -25,8 +24,8 @@ def main():
         print(f"Required action: {response.recommended_action}")
         return
 
-    # ONLY READY cases reach this point
-    decision = request_human_approval()
+    # Only READY cases reach human approval
+    decision = approval_function()
 
     if not decision.approved:
         print(f"\nWorkflow stopped. Rejected by {decision.reviewer}")
@@ -35,17 +34,22 @@ def main():
             print(f"\nCOMMENTS: {decision.comments}")
 
         return
-    
 
-    # Human explicitly approved processing.
     print(f"\nAPPROVED BY {decision.reviewer}")
 
     if decision.comments:
         print(f"\nCOMMENTS: {decision.comments}")
 
-    submit_transfer_for_processing(transfer_case)
+    processing_function(transfer_case)
 
 
+
+def main():
+    provider = OpenAIProvider()
+
+
+    run_transfer_workflow(provider, request_human_approval, submit_transfer_for_processing,)
+ 
 if __name__ == "__main__":
     main()
 
