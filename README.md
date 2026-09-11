@@ -227,6 +227,24 @@ The repository structure will evolve as additional architectural layers are impl
 
 ---
 
+## Setup
+
+This project requires Python 3.12 or later.
+
+From the repository root, create and activate a virtual environment:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+Install the project and development dependencies:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+---
+
 ## Running the Current Lab
 
 The project should be run from the repository root so that Python package imports resolve correctly.
@@ -270,7 +288,7 @@ No real financial transaction is executed.
 The deterministic workflow-control tests can be run with:
 
 ```bash
-pytest
+python -m pytest
 ```
 
 The test suite will expand as new architectural capabilities are introduced.
