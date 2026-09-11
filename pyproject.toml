@@ -1,0 +1,28 @@
+[project]
+name = "enterprise-ai-lab"
+version = "0.1.0"
+description = "A hands-on, model-agnostic lab for exploring controlled enterprise AI deployments."
+requires-python = ">=3.12"
+
+dependencies = [
+    "openai-agents==0.22.0",
+    "pydantic==2.13.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+include = ["app*", "models*"]
+exclude = [
+    "tests*",
+    "data*",
+    "evals*",
+    "governance*",
+    "architecture*",
+]
