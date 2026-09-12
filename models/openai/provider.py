@@ -7,22 +7,24 @@ from models.base import ModelProvider
 
 class OpenAIProvider(ModelProvider):
 
-    def __init__(self):
+    def __init__(self, agent_tools=None):
+
+        if agent_tools is None:
+            agent_tools = [get_transfer_policy]
+
         self.agent = Agent(
             name = "Transfer Review Assistant",
             instructions=(
 
                 "You assist wealth-management operations specialists "
                 "with reviewing asset-transfer cases. "
-                "Use the transfer policy tool when determining whether "
+                "Use available tools when needed to determine whether "
                 "a transfer case is complete or what action is permitted. "
-                "Do not authorize or execute financial transaction."
+                "Do not authorize or execute financial transactions. "
                 "Consequential financial actions require human approval."
                 ),
-            tools = [
-                get_transfer_policy
-                ],
-            
+
+            tools=agent_tools,
             output_type=TransferReviewResult,
 
             )
