@@ -25,7 +25,7 @@ def run_evals():
 
         result = "PASS" if passed else "FAIL"
 
-        print(f"Result: {result}")
+        print(f"Eval Result: {result}")
 
 
 if __name__ == "__main__":
