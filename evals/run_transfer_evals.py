@@ -14,10 +14,13 @@ def run_evals():
     failed_count = 0
 
     for case in transfer_eval_cases:
+
+        case_passed_count = 0
+
         for run_number in range(runs_per_case):
             print(
                 f"\nRunning eval: {case['case_id']} "
-            f"(Run {run_number + 1}/{runs_per_case})"
+                f"(Run {run_number + 1}/{runs_per_case})"
             )
 
             prompt = build_transfer_review_prompt(case["input"])
@@ -27,17 +30,25 @@ def run_evals():
             print(f"Actual: {actual}")
 
             passed = evaluate_transfer_result(
-            case["expected"],
-            actual,
+                case["expected"],
+                actual,
             )
 
             if passed:
                 passed_count += 1
+                case_passed_count += 1
             else:
                 failed_count += 1
 
             result = "PASS" if passed else "FAIL"
             print(f"Eval Result: {result}")
+
+        case_pass_rate = (case_passed_count / runs_per_case) * 100
+        print(
+            f"\nCase Summary: {case['case_id']} — "
+            f"{case_passed_count}/{runs_per_case} passed "
+            f"({case_pass_rate:.1f}%)"
+        )
 
 
     total = passed_count + failed_count
