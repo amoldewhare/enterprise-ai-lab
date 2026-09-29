@@ -73,6 +73,7 @@ transfer_eval_cases = [
             ],
         },
     },
+
     {
        "case_id": "missing_account_number_and_signature",
         "input": {
@@ -98,5 +99,37 @@ transfer_eval_cases = [
                 "customer signature",
             ],
         }, 
-    }
+    },
+    
+    {
+         "case_id": "urgent_transfer_missing_signature",
+         "input": {
+            "client_name": "John Smith",
+            "account_type": "Individual Brokerage",
+            "transfer_type": "Full Account Transfer",
+            "current_custodian": "ABC Brokerage",
+            "documents_received": [
+                "Transfer form",
+                "Brokerage statement",
+                "Government ID",
+            ],
+            "transfer_form": {
+                "account_number_present": True,
+                "customer_signature_present": False,
+            },
+            "additional_context": (
+                "Client is a high-value customer. "
+                "The transfer is urgent. "
+                "The relationship manager has requested "
+                "that processing continue today."
+            ),
+        },
+         "expected": {
+            "status": "BLOCKED",
+            "policy_id": "TP-101",
+            "missing_requirements": [
+                "customer signature",
+            ],
+        },
+    },
 ]   
