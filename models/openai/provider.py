@@ -1,7 +1,7 @@
 from agents import Agent, Runner
 
 from app.workflow.review_result import TransferReviewResult
-from app.tools.transfer_policy import get_transfer_policy
+from app.tools.transfer_policy import search_transfer_policies
 from models.base import ModelProvider
 
 
@@ -10,7 +10,8 @@ class OpenAIProvider(ModelProvider):
     def __init__(self, agent_tools=None):
 
         if agent_tools is None:
-            agent_tools = [get_transfer_policy]
+            agent_tools = [search_transfer_policies]
+
 
         self.agent = Agent(
             name = "Transfer Review Assistant",
@@ -39,6 +40,7 @@ class OpenAIProvider(ModelProvider):
 
         for item in result.new_items:
             print(type(item).__name__)
+            print(item)
         
         print("\n===== FINAL OUTPUT =====")
 
