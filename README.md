@@ -4,7 +4,7 @@ A hands-on, model-agnostic lab for exploring how LLM-based systems move from pro
 
 The project uses a fictional wealth-management asset-transfer workflow to examine the architectural layers that need to surround an LLM before it can participate responsibly in an enterprise process.
 
-The lab is intentionally evolving. Some capabilities are implemented and tested today; others are represented in the repository structure as planned architectural layers.
+The lab is intentionally evolving. Capabilities are progressively built, tested, observed, and documented as the architecture develops.
 
 The guiding principle is:
 
@@ -12,19 +12,44 @@ The guiding principle is:
 
 ---
 
+## Lab Progress
+
+This repository is being built progressively alongside an eight-part **Enterprise AI Deployment Lab** series.
+
+Each part introduces an architectural question, builds or modifies the working lab to investigate it, and documents what was actually observed.
+
+| Part | Focus | Status |
+|---|---|---|
+| Part 1 | Authoritative grounding | Published / Implemented |
+| Part 2 | Tool-calling lifecycle | Published / Implemented |
+| Part 3 | Context discovery and retrieval | Published / Implemented |
+| Part 4 | Enterprise connectivity | Next |
+| Part 5 | Control and authorization | Planned |
+| Part 6 | Evaluation | Planned |
+| Part 7 | Production architecture | Planned |
+| Part 8 | Model selection | Planned |
+
+A capability is not treated as implemented simply because it appears in the architecture or roadmap.
+
+The accompanying articles follow capabilities that have been built, run, and observed in the public repository.
+
+---
+
 ## Why This Project Exists
 
 Enterprise AI systems require more than a capable language model.
 
-A model may produce a plausible answer while still lacking authoritative enterprise context, appropriate permissions, deterministic controls, evaluation, observability, or the ability to explain the basis of its recommendation.
+A model may produce a plausible answer while still lacking authoritative enterprise context, appropriate permissions, deterministic controls, evaluation, observability, or a reliable basis for its recommendation.
 
-This lab explores those boundaries by progressively building an enterprise AI workflow and examining questions such as:
+This lab explores those boundaries by progressively building an enterprise AI workflow and asking questions such as:
 
 - What happens when an LLM does not have authoritative enterprise context?
 - How does grounding change the basis of a recommendation?
-- What actually happens when an agent calls a tool?
-- How should enterprise knowledge and policies be retrieved?
-- How should agents interact with enterprise APIs and systems of record?
+- What actually happens when an LLM requests a tool?
+- What executes the tool?
+- How does the right enterprise context reach the LLM?
+- How should enterprise knowledge be discovered and retrieved?
+- How should AI systems interact with enterprise APIs and systems of record?
 - Which decisions belong to the model, deterministic application logic, or humans?
 - How should AI behavior be evaluated?
 - What changes when moving from prototype to production?
@@ -55,11 +80,11 @@ A representative fictional transfer case contains information such as:
 - customer signature
 - brokerage statement
 
-The AI assistant reviews the case, determines whether required information is present, consults available policy information, and prepares a recommendation.
+The AI system reviews the case, determines what information it needs, retrieves available enterprise policy context, and prepares a structured recommendation.
 
 The AI does **not** independently authorize or execute the financial transaction.
 
-Consequential actions remain subject to deterministic application controls and human authorization.
+Consequential actions remain subject to deterministic application controls and explicit human authorization.
 
 All companies, customers, policies, cases, metrics, and business scenarios in this repository are fictional unless explicitly stated otherwise.
 
@@ -67,28 +92,32 @@ All companies, customers, policies, cases, metrics, and business scenarios in th
 
 ## Current Implementation
 
-The current implementation includes:
+The current lab includes:
 
-- a fictional wealth-management transfer case
+- a fictional wealth-management transfer workflow
 - prompt construction for transfer review
 - an OpenAI Agents SDK-based provider
 - structured model output using Pydantic
-- a fictional transfer-policy tool
-- observable agent/tool execution
+- a fictional enterprise policy repository
+- deterministic Python tools
+- observable tool-call execution
+- a grounding comparison experiment
+- a tool-calling lifecycle experiment
+- a simple policy context discovery and retrieval experiment
 - deterministic application-level workflow controls
 - explicit human approval
 - controlled post-approval processing
 - automated workflow tests
-- a reproducible grounding comparison experiment
-- documented evidence from an observed grounding experiment
+- evaluation cases and evaluators
+- evidence files documenting observed experiments
 
-The current workflow can distinguish between:
+The current workflow can return:
 
 ```text
 READY
 ```
 
-and:
+or:
 
 ```text
 BLOCKED
@@ -96,81 +125,111 @@ BLOCKED
 
 A `BLOCKED` case cannot reach approval or processing.
 
-A `READY` case must still receive explicit human approval before the controlled processing function can execute.
+A `READY` recommendation still requires explicit human approval before the controlled processing function can execute.
+
+> **READY is a recommendation, not authorization.**
 
 ---
 
 ## Current Architecture
 
-The implemented workflow currently resembles:
+The architecture has evolved through the first three experiments.
+
+The current conceptual flow is:
 
 ```text
-                     TRANSFER CASE
-                          |
-                          v
-                   REVIEW PROMPT
-                          |
-                          v
-                  OPENAI PROVIDER
-                          |
-                          v
-                     AI AGENT
-                          |
-                    +-----+-----+
-                    |           |
-                    v           |
-              POLICY TOOL       |
-                 TP-101         |
-                    |           |
-                    +-----+-----+
-                          |
-                          v
-              STRUCTURED REVIEW RESULT
-                          |
-                 +--------+--------+
-                 |                 |
-              BLOCKED             READY
-                 |                 |
-                 v                 v
-            STOP WORKFLOW    HUMAN APPROVAL
-                                   |
-                           +-------+-------+
-                           |               |
-                         REJECT          APPROVE
-                           |               |
-                           v               v
-                          STOP      CONTROLLED ACTION
+TRANSFER CASE
+     |
+     v
+    LLM
+     |
+     |  What information do I need?
+     v
+TOOL REQUEST
+     |
+     v
+AGENT RUNTIME
+     |
+     v
+CONTEXT DISCOVERY / RETRIEVAL
+     |
+     v
+ENTERPRISE POLICY REPOSITORY
+     |
+     v
+CANDIDATE AUTHORITATIVE CONTEXT
+     |
+     v
+    LLM
+     |
+     |  What does this mean for this case?
+     v
+STRUCTURED REVIEW RESULT
+     |
+ +---+---+
+ |       |
+ v       v
+BLOCKED READY
+ |       |
+ v       v
+STOP   HUMAN APPROVAL
+          |
+      +---+---+
+      |       |
+      v       v
+    REJECT  APPROVE
+      |       |
+      v       v
+     STOP  CONTROLLED ACTION
 ```
 
-This architecture intentionally separates several responsibilities:
+This architecture intentionally separates several responsibilities.
 
-**Model reasoning**  
-The model interprets the case and generates a recommendation.
+### Model Reasoning
 
-**Authoritative information**  
-Tools provide information that should not simply be invented by the model.
+The LLM interprets the business case, determines when available external context is needed, and produces a structured recommendation.
 
-**Deterministic application logic**  
-Python controls whether a workflow is allowed to advance.
+### Tool Request
 
-**Human authorization**  
-An authorized reviewer decides whether a consequential action may proceed.
+The LLM can request an available tool. Requesting a tool is not the same as executing it.
 
-**Controlled execution**  
-Processing occurs only after the application control and human approval requirements have been satisfied.
+### Agent Runtime
+
+The runtime mediates between the LLM and executable capabilities.
+
+The LLM does not directly execute Python functions.
+
+### Deterministic Tools
+
+Python functions perform defined operations such as retrieving information from the fictional enterprise policy repository.
+
+### Enterprise Context
+
+Enterprise knowledge exists outside the LLM and can be supplied dynamically when relevant to the business case.
+
+### Deterministic Application Logic
+
+Application code controls whether the workflow is allowed to advance.
+
+### Human Authorization
+
+An authorized reviewer determines whether a consequential action may proceed.
+
+### Controlled Execution
+
+Processing occurs only after application controls and human approval requirements have been satisfied.
 
 ---
 
-## Grounding Experiment
+## Part 1 Experiment — Authoritative Grounding
 
-One of the first experiments in the lab examines the difference between a model producing a plausible recommendation and an agent having access to an authoritative policy source.
+The first experiment examined the difference between a model producing a plausible recommendation and a system giving the model access to an authoritative enterprise policy.
 
-The same transfer case, prompt, provider implementation, agent instructions, and structured output are used in two runs.
-
-Only policy-tool access changes:
+Conceptually:
 
 ```text
-BEFORE
+WITHOUT AUTHORITATIVE POLICY
+
 Transfer Case
      |
      v
@@ -183,15 +242,24 @@ Plausible Recommendation
 versus:
 
 ```text
-AFTER
+WITH AUTHORITATIVE POLICY
+
 Transfer Case
      |
      v
-   Agent
+    LLM
      |
-     +------> Policy Tool TP-101
-     |              |
-     <--------------+
+     v
+Tool Request
+     |
+     v
+Runtime
+     |
+     v
+Policy Tool
+     |
+     v
+Authoritative Policy
      |
      v
     LLM
@@ -202,7 +270,7 @@ Grounded Recommendation
 
 In the observed baseline run, the model had no policy tool and produced additional requirements that were not established by an authoritative source supplied in the experiment.
 
-In the observed grounded run, the agent called the policy tool and based its recommendation on the requirements returned by fictional policy `TP-101`.
+In the observed grounded run, the policy was made available through a tool and the recommendation was based on the requirements returned by fictional policy `TP-101`.
 
 This does **not** demonstrate that tool access eliminates hallucinations or guarantees correctness.
 
@@ -216,7 +284,7 @@ The reproducible experiment is located at:
 experiments/grounding_comparison.py
 ```
 
-The observed Article 1 evidence is documented at:
+Observed evidence is documented at:
 
 ```text
 evidence/article-01-grounding.md
@@ -224,17 +292,11 @@ evidence/article-01-grounding.md
 
 ---
 
-## Observable Agent Behavior
+## Part 2 Experiment — What Happens When the LLM Requests a Tool?
 
-The lab exposes the execution lifecycle produced by the agent runtime.
+The second experiment examined what happens between the model determining that external information is needed and the final structured response.
 
-When no tool was available in the grounding baseline, the observed execution was:
-
-```text
-MessageOutputItem
-```
-
-When the policy tool was available and selected by the agent, the observed execution was:
+The observed runtime lifecycle included:
 
 ```text
 ToolCallItem
@@ -245,27 +307,184 @@ MessageOutputItem
 Conceptually:
 
 ```text
-Model Call
-    |
-    v
-Tool Request
-    |
-    v
-SDK Executes Python Tool
-    |
-    v
-Tool Result
-    |
-    v
-Model Continues
-    |
-    v
-Final Structured Response
+LLM
+ |
+ | Tool Request
+ v
+AGENT RUNTIME
+ |
+ v
+EXECUTABLE PYTHON TOOL
+ |
+ v
+TOOL RESULT
+ |
+ v
+LLM CONTINUES
+ |
+ v
+STRUCTURED RESPONSE
 ```
 
-This distinction matters because the LLM itself is not directly executing enterprise code.
+This exposed an important architectural distinction.
 
-The agent runtime mediates the interaction between model reasoning and executable tools.
+> **The LLM requests the capability. The runtime executes the capability.**
+
+The LLM itself is not directly executing enterprise Python code.
+
+The runtime mediates the interaction between probabilistic model reasoning and deterministic executable capabilities.
+
+The experiment is located at:
+
+```text
+experiments/tool_call_lifecycle.py
+```
+
+Observed evidence is documented at:
+
+```text
+evidence/article-02-tool-calling.md
+```
+
+The evidence represents an observed execution. It should not be interpreted as proof that every model or runtime execution will behave identically.
+
+---
+
+## Part 3 Experiment — Context Discovery and Retrieval
+
+The third experiment asked a different question:
+
+> **How does the right enterprise context get to the LLM in the first place?**
+
+The policy repository contained multiple fictional policies:
+
+```text
+TP-101 — Full Account Transfer Requirements
+TP-102 — Partial Account Transfer Requirements
+TP-103 — Retirement Account Transfer Requirements
+```
+
+### Experiment 1 — Opaque Policy Lookup
+
+The available tool required the LLM to provide an internal policy identifier:
+
+```text
+get_transfer_policy(policy_id)
+```
+
+The transfer case identified the business situation as a:
+
+```text
+Full Account Transfer
+```
+
+but the LLM had not been given the internal identifier `TP-101`.
+
+In the observed execution, it requested:
+
+```text
+get_transfer_policy("asset_transfer_review")
+```
+
+No matching policy existed.
+
+The deterministic tool therefore returned:
+
+```text
+{}
+```
+
+The LLM then continued and produced a `BLOCKED` recommendation containing plausible requirements that were not present in the enterprise policy repository.
+
+The failure exposed an important distinction:
+
+> **Enterprise knowledge existing somewhere in the system does not mean the correct enterprise context reaches the LLM.**
+
+### Experiment 2 — Searchable Policy Context
+
+The retrieval interface was changed to:
+
+```text
+search_transfer_policies(query)
+```
+
+The transfer case was not changed.
+
+The LLM was not told which policy to select.
+
+Instead, it could express the information it needed using business terms from the transfer case.
+
+The runtime executed the deterministic search against the policy repository.
+
+The simple search returned multiple candidate policies.
+
+The LLM then identified `TP-101 — Full Account Transfer Requirements` as applicable to the case and produced:
+
+```text
+status = READY
+policy_id = TP-101
+missing_requirements = []
+```
+
+The experiment demonstrated a narrower architectural lesson:
+
+> **Giving an LLM access to enterprise knowledge is not enough. The architecture has to get the right enterprise context to the model at the right time.**
+
+The retrieval implementation is intentionally simple.
+
+It is **not** intended to represent a production enterprise RAG architecture, sophisticated semantic search system, or authority-resolution mechanism.
+
+Observed evidence is documented at:
+
+```text
+evidence/article-03-context-retrieval.md
+```
+
+---
+
+## Context as an Architectural Layer
+
+The first three experiments progressively changed the mental model.
+
+Part 1 asked:
+
+```text
+Does the recommendation have an authoritative basis?
+```
+
+Part 2 asked:
+
+```text
+What actually happens when external information is requested?
+```
+
+Part 3 asked:
+
+```text
+How does the relevant enterprise information get onto that path?
+```
+
+The resulting conceptual architecture is:
+
+```text
+ENTERPRISE KNOWLEDGE
+        |
+        v
+CONTEXT DISCOVERY / RETRIEVAL
+        |
+        v
+RELEVANT AUTHORITATIVE CONTEXT
+        |
+        v
+       LLM
+        |
+        v
+STRUCTURED RECOMMENDATION
+```
+
+The current experiment focuses on discovering relevant context.
+
+More advanced problems—such as conflicting sources, authority resolution, provenance, sophisticated retrieval, and large-scale enterprise knowledge architectures—are outside the scope of the current implementation.
 
 ---
 
@@ -285,38 +504,40 @@ if response.status == "READY":
     request_human_approval()
 ```
 
-Only an approved `READY` case can reach the processing function.
+Only an approved `READY` case can reach the controlled processing function.
 
-This separation is intentional.
+This separation is intentional:
 
-The model can recommend.
+```text
+LLM              → recommends
+Application      → controls workflow state
+Human            → authorizes consequential action
+Processing code  → executes approved action
+```
 
-The application controls workflow state.
-
-The human authorizes consequential action.
+A model recommendation is therefore not equivalent to enterprise authorization.
 
 ---
 
 ## What Has Been Tested
 
-The current automated test suite contains four deterministic workflow tests.
+The lab contains deterministic workflow tests covering important application-control boundaries.
 
-### 1. BLOCKED cases stop
+These include:
 
-A `BLOCKED` model result must never reach:
+### BLOCKED cases stop
 
-- human approval
-- transfer processing
+A `BLOCKED` model result must never reach human approval or transfer processing.
 
-### 2. READY + approved reaches processing
+### READY + approved reaches processing
 
-A `READY` result followed by explicit human approval can reach the controlled processing function.
+A `READY` recommendation followed by explicit human approval can reach the controlled processing function.
 
-### 3. READY + rejected stops
+### READY + rejected stops
 
-A `READY` model recommendation does not override a human rejection.
+A `READY` recommendation does not override a human rejection.
 
-### 4. Invalid workflow states are rejected
+### Invalid workflow states are rejected
 
 The structured output schema accepts only:
 
@@ -325,15 +546,13 @@ READY
 BLOCKED
 ```
 
-An unsupported state such as:
+Unsupported workflow states are rejected by schema validation.
 
-```text
-PENDING
-```
+The lab also contains evaluation cases used to exercise transfer-review behavior across different missing-requirement scenarios.
 
-is rejected by Pydantic validation.
+These evaluations are groundwork for the deeper evaluation architecture explored later in the series.
 
-Run the tests with:
+Run the automated tests with:
 
 ```bash
 python -m pytest
@@ -341,71 +560,33 @@ python -m pytest
 
 ---
 
-## Project Structure
+## Model, Runtime, Tool, and Application
 
-```text
-enterprise-ai-lab/
-├── .github/
-│   └── workflows/
-│       └── tests.yml
-│
-├── app/
-│   ├── __init__.py
-│   ├── main.py
-│   ├── guardrails/
-│   ├── rag/
-│   ├── tools/
-│   │   └── transfer_policy.py
-│   └── workflow/
-│       ├── approval.py
-│       ├── processing.py
-│       ├── review.py
-│       ├── review_result.py
-│       └── transfer_case.py
-│
-├── architecture/
-├── business-case/
-│
-├── data/
-│   └── sample/
-│
-├── evals/
-│   ├── datasets/
-│   ├── evaluators/
-│   └── results/
-│
-├── evidence/
-│   └── article-01-grounding.md
-│
-├── experiments/
-│   └── grounding_comparison.py
-│
-├── governance/
-│
-├── models/
-│   ├── base.py
-│   ├── anthropic/
-│   │   ├── __init__.py
-│   │   └── provider.py
-│   ├── openai/
-│   │   ├── __init__.py
-│   │   └── provider.py
-│   └── qwen/
-│       ├── __init__.py
-│       └── provider.py
-│
-├── tests/
-│   └── test_workflow.py
-│
-├── .env.example
-├── .gitignore
-├── pyproject.toml
-└── README.md
-```
+The lab uses these terms deliberately.
 
-Some directories represent architectural capabilities that are planned but not yet implemented.
+### LLM
 
-Their presence in the repository should not be interpreted as evidence that those capabilities are complete.
+The probabilistic reasoning component.
+
+It interprets information, determines when an available capability may be useful, and generates structured output.
+
+### Agent
+
+The configured AI system construct that combines the LLM with instructions, available tools, structured output expectations, and runtime behavior.
+
+### Agent Runtime
+
+The orchestration layer that manages interaction between the LLM and executable capabilities.
+
+### Tool
+
+A deterministic capability that can be requested by the LLM and executed by the runtime.
+
+### Application
+
+The surrounding deterministic software responsible for workflow state, controls, authorization boundaries, and consequential execution.
+
+Keeping these responsibilities separate is important when reasoning about enterprise AI architecture.
 
 ---
 
@@ -413,7 +594,7 @@ Their presence in the repository should not be interpreted as evidence that thos
 
 The project is intentionally model-agnostic at the application architecture level.
 
-The `ModelProvider` abstraction separates the workflow from a specific model provider:
+The `ModelProvider` abstraction is intended to separate the enterprise workflow from a specific model provider:
 
 ```text
 Enterprise Workflow
@@ -428,11 +609,11 @@ Enterprise Workflow
 
 ### Current
 
-The OpenAI provider is currently used for the implemented agent workflow.
+The OpenAI provider is currently used for the implemented agent workflow and experiments.
 
 ### Planned
 
-Anthropic and local Qwen providers are represented in the repository structure for future comparison and experimentation.
+Anthropic and local Qwen providers are represented for future comparison and experimentation.
 
 Their presence does not imply equivalent functionality has already been implemented or tested.
 
@@ -444,7 +625,12 @@ The longer-term objective is to run comparable enterprise workflows and evaluati
 
 This project requires **Python 3.12 or later**.
 
-Clone the repository and move into the project directory.
+Clone the repository:
+
+```bash
+git clone https://github.com/amoldewhare/enterprise-ai-lab.git
+cd enterprise-ai-lab
+```
 
 Create a virtual environment:
 
@@ -482,37 +668,44 @@ The workflow will:
 
 1. load the fictional transfer case
 2. construct the review prompt
-3. run the AI agent
-4. allow the agent to retrieve the transfer policy when needed
-5. return a structured review result
-6. apply deterministic workflow controls
-7. request human approval when the case is `READY`
-8. execute the controlled processing function only after approval
+3. run the configured AI system
+4. allow the LLM to request available enterprise context
+5. execute the requested tool through the runtime
+6. return retrieved context to the LLM
+7. produce a structured review result
+8. apply deterministic workflow controls
+9. request human approval when the case is `READY`
+10. execute the controlled processing function only after approval
 
 ---
 
-## Running the Grounding Experiment
+## Running the Experiments
 
-From the repository root:
+### Part 1 — Grounding
 
 ```bash
 python -m experiments.grounding_comparison
 ```
 
-The experiment creates two providers:
+This compares behavior with and without authoritative policy-tool access.
 
-```text
-Baseline  → agent_tools=[]
-Grounded  → agent_tools=[get_transfer_policy]
+### Part 2 — Tool-Calling Lifecycle
+
+```bash
+python -m experiments.tool_call_lifecycle
 ```
 
-Both receive the same fictional transfer case and review prompt.
+This exposes the observed runtime items associated with tool use.
 
-The experiment prints both the agent execution lifecycle and the resulting structured recommendation.
+Part 3 context-discovery behavior is exercised through the current workflow and documented in:
 
-Because model generation is probabilistic, repeated runs may not produce identical wording or recommendations.
+```text
+evidence/article-03-context-retrieval.md
+```
 
-The evidence file records one observed run; it should not be interpreted as a statistical benchmark.
+Because model generation is probabilistic, repeated executions may not produce identical wording, tool requests, or recommendations.
+
+Evidence files record observed executions. They should not be interpreted as statistical benchmarks or guarantees of future behavior.
 
 ---
 
@@ -524,7 +717,7 @@ Run:
 python -m pytest
 ```
 
-The project also uses GitHub Actions to run the automated tests on repository pushes and pull requests.
+The project also uses GitHub Actions to run automated tests on repository pushes and pull requests.
 
 The CI workflow is defined in:
 
@@ -532,81 +725,92 @@ The CI workflow is defined in:
 .github/workflows/tests.yml
 ```
 
-This provides an independent environment for validating the deterministic workflow tests.
+This provides an independent environment for validating deterministic workflow tests.
 
 ---
 
 ## Implemented vs. Planned
 
-A central goal of this repository is to distinguish what has actually been built from what is still being explored.
+A central discipline of this repository is distinguishing what has actually been built from what is still being explored.
 
-### Implemented / Tested
+### Implemented / Tested / Observed
 
 - fictional asset-transfer workflow
 - structured AI review result
 - OpenAI Agents SDK integration
-- policy function tool
+- deterministic policy tools
+- fictional multi-policy repository
 - observable tool-call lifecycle
-- deterministic BLOCKED/READY workflow controls
+- simple context discovery and policy retrieval
+- deterministic `BLOCKED` / `READY` workflow controls
 - explicit human approval
 - controlled processing action
 - automated workflow tests
 - GitHub Actions test execution
+- transfer-review evaluation cases
 - grounding comparison experiment
-- Article 1 grounding evidence
+- tool-calling lifecycle experiment
+- context-retrieval experiment
+- evidence for Parts 1–3
 
 ### Planned / Evolving
 
-- enterprise RAG and retrieval architecture
-- richer guardrails
-- identity and authorization boundaries
 - enterprise API integration patterns
-- MCP experiments
-- evaluation datasets and evaluators
+- identity and authentication boundaries
+- authorization controls
+- richer guardrails
+- read/write capability boundaries
+- deeper evaluation architecture
 - trace-based evaluation
 - failure taxonomy
 - regression evaluation
 - production observability
+- resilience and reliability testing
 - latency and cost measurement
-- reliability testing
 - Anthropic provider experiments
 - local Qwen provider experiments
 - cross-model evaluation
+- production deployment architecture
 
-These planned capabilities will be documented as they are actually implemented and tested.
+Planned capabilities will be documented as implemented only after they have actually been built and exercised.
 
 ---
 
 ## Roadmap
 
-The lab will evolve through several architectural layers:
+The lab progresses through eight architectural questions:
 
 ```text
-BUSINESS PROBLEM
+PART 1
+AUTHORITATIVE GROUNDING
        |
        v
-LLM BEHAVIOR
+PART 2
+TOOL-CALLING LIFECYCLE
        |
        v
-GROUNDING
+PART 3
+CONTEXT DISCOVERY / RETRIEVAL
        |
        v
-CONTEXT / RETRIEVAL
+PART 4
+ENTERPRISE CONNECTIVITY
        |
        v
-TOOLS / ENTERPRISE INTEGRATION
-       |
-       v
+PART 5
 CONTROL / AUTHORIZATION
        |
        v
+PART 6
 EVALUATION
        |
        v
+PART 7
 PRODUCTION ARCHITECTURE
        |
        v
-MODEL / ECONOMICS DECISION
+PART 8
+MODEL SELECTION
 ```
 
 The goal is not to add architectural complexity for its own sake.
@@ -615,109 +819,144 @@ Each layer should address an observed enterprise requirement, failure mode, cont
 
 ---
 
-## Building an Enterprise AI Agent: Lessons from the Lab
+# Building an Enterprise AI Agent: Lessons from the Lab
 
 The repository supports an eight-part series documenting what is built, tested, and observed as the architecture evolves.
 
-### Part 1 — A Good LLM Answer Isn't Good Enough for the Enterprise
+## Part 1 — A Good LLM Answer Isn't Good Enough for the Enterprise
 
-Grounding, authority, and the difference between plausible recommendations and recommendations supported by authoritative enterprise information.
+**Core question:** How do you ground an LLM in authoritative enterprise policy rather than accept plausible reasoning?
 
-### Part 2 — What Actually Happens When an AI Agent Calls a Tool?
-
-Agent runtime behavior, tool selection, tool execution, and the model/tool interaction loop.
-
-### Part 3 — Context Is an Architecture Problem, Not Just a Prompt Problem
-
-Retrieval, RAG, policies, provenance, freshness, and access boundaries.
-
-### Part 4 — How Does an AI Agent Actually Connect to the Enterprise?
-
-APIs, tools, MCP, enterprise systems, authentication, identity, data boundaries, and systems of record.
-
-### Part 5 — When Should an AI Agent Be Allowed to Act?
-
-Human approval, deterministic controls, authorization, read/write boundaries, and security.
-
-### Part 6 — How Do You Know an AI Agent Actually Works?
-
-Evaluations, test cases, traces, failure taxonomy, regression testing, model quality, and operational metrics.
-
-### Part 7 — From Prototype to Production: What Changes?
-
-Deployment architecture, observability, resilience, latency, security, auditability, scaling, and operational change.
-
-### Part 8 — OpenAI vs. Claude vs. Local Qwen: What Actually Matters in Enterprise Model Selection?
-
-Comparing models using the same workflow, policies, and evaluation framework across quality, tool behavior, latency, cost, control, and deployment options.
+The experiment compares an ungrounded recommendation with one based on policy information retrieved through a tool.
 
 ---
 
-## Evidence-First Approach
+## Part 2 — What Actually Happens When an AI Agent Calls a Tool?
 
-The development approach for this lab is:
+**Core question:** What happens between the model determining that it needs information, requesting a tool, receiving the result, and continuing its reasoning?
 
-> **BUILD → TEST → OBSERVE → DOCUMENT**
+The experiment exposes the runtime lifecycle around tool requests and deterministic Python execution.
+
+---
+
+## Part 3 — Context Is an Architecture Problem, Not Just a Prompt Problem
+
+**Core question:** How should enterprise context be supplied and controlled rather than simply placed into prompts?
+
+The experiment explores the difference between having enterprise knowledge available and enabling the system to discover and supply context relevant to the business case.
+
+---
+
+## Part 4 — How Does an AI Agent Actually Connect to the Enterprise?
+
+**Core question:** How do AI systems interact with APIs, enterprise systems, data, and executable capabilities?
+
+This stage will extend the lab beyond the current fictional policy repository toward enterprise connectivity patterns.
+
+---
+
+## Part 5 — When Should an AI Agent Be Allowed to Act?
+
+**Core question:** Where do permissions, deterministic controls, approval boundaries, and human authorization belong?
+
+This stage will examine the boundary between recommending an action and being authorized to execute one.
+
+---
+
+## Part 6 — How Do You Know an AI Agent Actually Works?
+
+**Core question:** How do you evaluate AI behavior systematically rather than judging a handful of convincing responses?
+
+This stage will build on the existing evaluation groundwork and examine repeatable evaluation of AI behavior.
+
+---
+
+## Part 7 — From Prototype to Production: What Changes?
+
+**Core question:** What additional architecture, controls, observability, and operational capabilities are required when moving toward production?
+
+This stage will examine the difference between a working lab and an operational enterprise AI system.
+
+---
+
+## Part 8 — OpenAI vs. Claude vs. Local Qwen: What Actually Matters in Enterprise Model Selection?
+
+**Core question:** How should enterprises think about model choice once the surrounding architecture exists?
+
+The goal is to compare model/provider configurations using a common workflow and evaluation approach rather than comparing models in isolation.
+
+---
+
+## Evidence-First Development
+
+The development discipline for this lab is:
+
+> **BUILD → TEST → COMMIT → PUSH → VERIFY → WRITE → PUBLISH**
+
+The public repository should lead the article series, not follow it.
+
+A technical capability should not appear in an article as implemented before the corresponding code and evidence exist in the public repository.
 
 Claims in the accompanying articles should correspond to something that has actually been:
 
 - implemented
 - executed
-- tested
+- tested or experimentally exercised
 - observed
-- measured
+- documented
 
 Planned capabilities are identified as planned rather than presented as completed work.
 
-The repository may evolve ahead of the article series. Git history and evidence artifacts provide the technical record behind specific observations discussed in the articles.
+Evidence artifacts provide a technical record behind observations discussed in the series.
 
-The Article 1 grounding experiment can be reproduced with:
-
-```text
-experiments/grounding_comparison.py
-```
-
-and its observed evidence is recorded in:
+Current evidence includes:
 
 ```text
 evidence/article-01-grounding.md
+evidence/article-02-tool-calling.md
+evidence/article-03-context-retrieval.md
 ```
 
 ---
 
 ## Enterprise Architecture Principle
 
-The central architectural idea explored by this project is that:
+The central architectural idea explored by this project is:
 
 > **The LLM is a component of the system, not the system itself.**
 
-A production enterprise AI architecture may ultimately need to coordinate:
+As the lab evolves, the broader architecture may need to coordinate:
 
 ```text
-Enterprise Application
+ENTERPRISE APPLICATION
         |
         v
-API / Orchestration Layer
+API / ORCHESTRATION LAYER
         |
         v
-Agent Runtime
+AGENT RUNTIME
         |
         v
-Model
+       LLM
         |
-        +--------------------+
-        |                    |
-        v                    v
-Context / Retrieval       Tool Gateway
-                              |
-                              v
-                       Enterprise APIs
-                              |
-                              v
-                       Systems of Record
+   +----+----+
+   |         |
+   v         v
+CONTEXT     TOOL
+DISCOVERY   REQUESTS
+   |         |
+   v         v
+ENTERPRISE  CONTROLLED
+KNOWLEDGE   CAPABILITIES
+             |
+             v
+        ENTERPRISE APIs
+             |
+             v
+        SYSTEMS OF RECORD
 ```
 
-with cross-cutting concerns including:
+with cross-cutting concerns that may include:
 
 ```text
 Identity
@@ -736,757 +975,33 @@ Latency
 Reliability
 ```
 
-This repository will progressively explore those concerns rather than assuming the model alone solves them.
+These are architectural concerns to be progressively explored.
+
+Their presence in this roadmap should not be interpreted as evidence that each capability has already been implemented.
 
 ---
 
-## Disclaimer
+## Scope of the Lab
 
-This repository is an educational and architectural lab.
+This repository intentionally starts simple.
 
-NorthStar Wealth Management, its customers, transfer cases, policies, operational metrics, and business scenarios are fictional.
+The objective is to make architectural boundaries visible through small, runnable experiments rather than introduce production-scale infrastructure before the underlying problem has been demonstrated.
 
-Nothing in this repository should be interpreted as financial, investment, compliance, or legal advice.
+For example, the current context experiment uses a small fictional policy repository and deterministic keyword retrieval.
 
-The workflow is intentionally designed so that AI recommendations do not independently authorize consequential financial actions.# Enterprise AI Deployment Lab
+It does not claim to implement production-scale:
 
-A hands-on, model-agnostic lab for exploring how LLM-based systems move from promising prototypes toward controlled enterprise deployments.
-
-The project uses a fictional wealth-management asset-transfer workflow to examine the architectural layers that need to surround an LLM before it can participate responsibly in an enterprise process.
-
-The lab is intentionally evolving. Some capabilities are implemented and tested today; others are represented in the repository structure as planned architectural layers.
-
-The guiding principle is:
-
-> **AI prepares and recommends. Deterministic application controls and authorized humans govern consequential actions.**
-
----
-
-## Why This Project Exists
-
-Enterprise AI systems require more than a capable language model.
-
-A model may produce a plausible answer while still lacking authoritative enterprise context, appropriate permissions, deterministic controls, evaluation, observability, or the ability to explain the basis of its recommendation.
-
-This lab explores those boundaries by progressively building an enterprise AI workflow and examining questions such as:
-
-- What happens when an LLM does not have authoritative enterprise context?
-- How does grounding change the basis of a recommendation?
-- What actually happens when an agent calls a tool?
-- How should enterprise knowledge and policies be retrieved?
-- How should agents interact with enterprise APIs and systems of record?
-- Which decisions belong to the model, deterministic application logic, or humans?
-- How should AI behavior be evaluated?
-- What changes when moving from prototype to production?
-- How do model choices affect quality, latency, cost, control, and deployment architecture?
-
-The objective is not to demonstrate that an LLM can generate an answer.
-
-The objective is to understand the architecture required to make AI behavior more grounded, controlled, observable, testable, and useful inside enterprise workflows.
-
----
-
-## Fictional Enterprise Scenario
-
-The lab uses a fictional company:
-
-**NorthStar Wealth Management**
-
-The example workflow is a customer asset transfer between brokerage institutions.
-
-A representative fictional transfer case contains information such as:
-
-- client name
-- account type
-- transfer type
-- current custodian
-- transfer documents
-- account number
-- customer signature
-- brokerage statement
-
-The AI assistant reviews the case, determines whether required information is present, consults available policy information, and prepares a recommendation.
-
-The AI does **not** independently authorize or execute the financial transaction.
-
-Consequential actions remain subject to deterministic application controls and human authorization.
-
-All companies, customers, policies, cases, metrics, and business scenarios in this repository are fictional unless explicitly stated otherwise.
-
----
-
-## Current Implementation
-
-The current implementation includes:
-
-- a fictional wealth-management transfer case
-- prompt construction for transfer review
-- an OpenAI Agents SDK-based provider
-- structured model output using Pydantic
-- a fictional transfer-policy tool
-- observable agent/tool execution
-- deterministic application-level workflow controls
-- explicit human approval
-- controlled post-approval processing
-- automated workflow tests
-- a reproducible grounding comparison experiment
-- documented evidence from an observed grounding experiment
-
-The current workflow can distinguish between:
-
-```text
-READY
-```
-
-and:
-
-```text
-BLOCKED
-```
-
-A `BLOCKED` case cannot reach approval or processing.
-
-A `READY` case must still receive explicit human approval before the controlled processing function can execute.
-
----
-
-## Current Architecture
-
-The implemented workflow currently resembles:
-
-```text
-                     TRANSFER CASE
-                          |
-                          v
-                   REVIEW PROMPT
-                          |
-                          v
-                  OPENAI PROVIDER
-                          |
-                          v
-                     AI AGENT
-                          |
-                    +-----+-----+
-                    |           |
-                    v           |
-              POLICY TOOL       |
-                 TP-101         |
-                    |           |
-                    +-----+-----+
-                          |
-                          v
-              STRUCTURED REVIEW RESULT
-                          |
-                 +--------+--------+
-                 |                 |
-              BLOCKED             READY
-                 |                 |
-                 v                 v
-            STOP WORKFLOW    HUMAN APPROVAL
-                                   |
-                           +-------+-------+
-                           |               |
-                         REJECT          APPROVE
-                           |               |
-                           v               v
-                          STOP      CONTROLLED ACTION
-```
-
-This architecture intentionally separates several responsibilities:
-
-**Model reasoning**  
-The model interprets the case and generates a recommendation.
-
-**Authoritative information**  
-Tools provide information that should not simply be invented by the model.
-
-**Deterministic application logic**  
-Python controls whether a workflow is allowed to advance.
-
-**Human authorization**  
-An authorized reviewer decides whether a consequential action may proceed.
-
-**Controlled execution**  
-Processing occurs only after the application control and human approval requirements have been satisfied.
-
----
-
-## Grounding Experiment
-
-One of the first experiments in the lab examines the difference between a model producing a plausible recommendation and an agent having access to an authoritative policy source.
-
-The same transfer case, prompt, provider implementation, agent instructions, and structured output are used in two runs.
-
-Only policy-tool access changes:
-
-```text
-BEFORE
-Transfer Case
-     |
-     v
-    LLM
-     |
-     v
-Plausible Recommendation
-```
-
-versus:
-
-```text
-AFTER
-Transfer Case
-     |
-     v
-   Agent
-     |
-     +------> Policy Tool TP-101
-     |              |
-     <--------------+
-     |
-     v
-    LLM
-     |
-     v
-Grounded Recommendation
-```
-
-In the observed baseline run, the model had no policy tool and produced additional requirements that were not established by an authoritative source supplied in the experiment.
-
-In the observed grounded run, the agent called the policy tool and based its recommendation on the requirements returned by fictional policy `TP-101`.
-
-This does **not** demonstrate that tool access eliminates hallucinations or guarantees correctness.
-
-It demonstrates a narrower but important point:
-
-> **Plausibility is not the same as authority.**
-
-The reproducible experiment is located at:
-
-```text
-experiments/grounding_comparison.py
-```
-
-The observed Article 1 evidence is documented at:
-
-```text
-evidence/article-01-grounding.md
-```
-
----
-
-## Observable Agent Behavior
-
-The lab exposes the execution lifecycle produced by the agent runtime.
-
-When no tool was available in the grounding baseline, the observed execution was:
-
-```text
-MessageOutputItem
-```
-
-When the policy tool was available and selected by the agent, the observed execution was:
-
-```text
-ToolCallItem
-ToolCallOutputItem
-MessageOutputItem
-```
-
-Conceptually:
-
-```text
-Model Call
-    |
-    v
-Tool Request
-    |
-    v
-SDK Executes Python Tool
-    |
-    v
-Tool Result
-    |
-    v
-Model Continues
-    |
-    v
-Final Structured Response
-```
-
-This distinction matters because the LLM itself is not directly executing enterprise code.
-
-The agent runtime mediates the interaction between model reasoning and executable tools.
-
----
-
-## Deterministic Workflow Controls
-
-The model's recommendation does not determine whether a financial action executes.
-
-Application code enforces the workflow boundary.
-
-Conceptually:
-
-```python
-if response.status == "BLOCKED":
-    stop_workflow()
-
-if response.status == "READY":
-    request_human_approval()
-```
-
-Only an approved `READY` case can reach the processing function.
-
-This separation is intentional.
-
-The model can recommend.
-
-The application controls workflow state.
-
-The human authorizes consequential action.
-
----
-
-## What Has Been Tested
-
-The current automated test suite contains four deterministic workflow tests.
-
-### 1. BLOCKED cases stop
-
-A `BLOCKED` model result must never reach:
-
-- human approval
-- transfer processing
-
-### 2. READY + approved reaches processing
-
-A `READY` result followed by explicit human approval can reach the controlled processing function.
-
-### 3. READY + rejected stops
-
-A `READY` model recommendation does not override a human rejection.
-
-### 4. Invalid workflow states are rejected
-
-The structured output schema accepts only:
-
-```text
-READY
-BLOCKED
-```
-
-An unsupported state such as:
-
-```text
-PENDING
-```
-
-is rejected by Pydantic validation.
-
-Run the tests with:
-
-```bash
-python -m pytest
-```
-
----
-
-## Project Structure
-
-```text
-enterprise-ai-lab/
-├── .github/
-│   └── workflows/
-│       └── tests.yml
-│
-├── app/
-│   ├── __init__.py
-│   ├── main.py
-│   ├── guardrails/
-│   ├── rag/
-│   ├── tools/
-│   │   └── transfer_policy.py
-│   └── workflow/
-│       ├── approval.py
-│       ├── processing.py
-│       ├── review.py
-│       ├── review_result.py
-│       └── transfer_case.py
-│
-├── architecture/
-├── business-case/
-│
-├── data/
-│   └── sample/
-│
-├── evals/
-│   ├── datasets/
-│   ├── evaluators/
-│   └── results/
-│
-├── evidence/
-│   └── article-01-grounding.md
-│
-├── experiments/
-│   └── grounding_comparison.py
-│
-├── governance/
-│
-├── models/
-│   ├── base.py
-│   ├── anthropic/
-│   │   ├── __init__.py
-│   │   └── provider.py
-│   ├── openai/
-│   │   ├── __init__.py
-│   │   └── provider.py
-│   └── qwen/
-│       ├── __init__.py
-│       └── provider.py
-│
-├── tests/
-│   └── test_workflow.py
-│
-├── .env.example
-├── .gitignore
-├── pyproject.toml
-└── README.md
-```
-
-Some directories represent architectural capabilities that are planned but not yet implemented.
-
-Their presence in the repository should not be interpreted as evidence that those capabilities are complete.
-
----
-
-## Model Strategy
-
-The project is intentionally model-agnostic at the application architecture level.
-
-The `ModelProvider` abstraction separates the workflow from a specific model provider:
-
-```text
-Enterprise Workflow
-        |
-        v
-  ModelProvider
-        |
-   +----+----+----------+
-   |         |          |
- OpenAI   Anthropic    Qwen
-```
-
-### Current
-
-The OpenAI provider is currently used for the implemented agent workflow.
-
-### Planned
-
-Anthropic and local Qwen providers are represented in the repository structure for future comparison and experimentation.
-
-Their presence does not imply equivalent functionality has already been implemented or tested.
-
-The longer-term objective is to run comparable enterprise workflows and evaluations across multiple model/provider configurations.
-
----
-
-## Setup
-
-This project requires **Python 3.12 or later**.
-
-Clone the repository and move into the project directory.
-
-Create a virtual environment:
-
-```bash
-python -m venv .venv
-```
-
-Activate it:
-
-```bash
-source .venv/bin/activate
-```
-
-Install the project and development dependencies:
-
-```bash
-python -m pip install -e ".[dev]"
-```
-
-Configure required environment variables using `.env.example` as a reference.
-
-Do not commit API keys or other secrets to the repository.
-
----
-
-## Running the Current Lab
-
-From the repository root:
-
-```bash
-python -m app.main
-```
-
-The workflow will:
-
-1. load the fictional transfer case
-2. construct the review prompt
-3. run the AI agent
-4. allow the agent to retrieve the transfer policy when needed
-5. return a structured review result
-6. apply deterministic workflow controls
-7. request human approval when the case is `READY`
-8. execute the controlled processing function only after approval
-
----
-
-## Running the Grounding Experiment
-
-From the repository root:
-
-```bash
-python -m experiments.grounding_comparison
-```
-
-The experiment creates two providers:
-
-```text
-Baseline  → agent_tools=[]
-Grounded  → agent_tools=[get_transfer_policy]
-```
-
-Both receive the same fictional transfer case and review prompt.
-
-The experiment prints both the agent execution lifecycle and the resulting structured recommendation.
-
-Because model generation is probabilistic, repeated runs may not produce identical wording or recommendations.
-
-The evidence file records one observed run; it should not be interpreted as a statistical benchmark.
-
----
-
-## Running the Tests
-
-Run:
-
-```bash
-python -m pytest
-```
-
-The project also uses GitHub Actions to run the automated tests on repository pushes and pull requests.
-
-The CI workflow is defined in:
-
-```text
-.github/workflows/tests.yml
-```
-
-This provides an independent environment for validating the deterministic workflow tests.
-
----
-
-## Implemented vs. Planned
-
-A central goal of this repository is to distinguish what has actually been built from what is still being explored.
-
-### Implemented / Tested
-
-- fictional asset-transfer workflow
-- structured AI review result
-- OpenAI Agents SDK integration
-- policy function tool
-- observable tool-call lifecycle
-- deterministic BLOCKED/READY workflow controls
-- explicit human approval
-- controlled processing action
-- automated workflow tests
-- GitHub Actions test execution
-- grounding comparison experiment
-- Article 1 grounding evidence
-
-### Planned / Evolving
-
-- enterprise RAG and retrieval architecture
-- richer guardrails
-- identity and authorization boundaries
-- enterprise API integration patterns
-- MCP experiments
-- evaluation datasets and evaluators
-- trace-based evaluation
-- failure taxonomy
-- regression evaluation
+- enterprise RAG
+- vector search
+- hybrid retrieval
+- reranking
+- authority resolution
+- enterprise IAM
+- policy engines
 - production observability
-- latency and cost measurement
-- reliability testing
-- Anthropic provider experiments
-- local Qwen provider experiments
-- cross-model evaluation
+- large-scale agent orchestration
 
-These planned capabilities will be documented as they are actually implemented and tested.
-
----
-
-## Roadmap
-
-The lab will evolve through several architectural layers:
-
-```text
-BUSINESS PROBLEM
-       |
-       v
-LLM BEHAVIOR
-       |
-       v
-GROUNDING
-       |
-       v
-CONTEXT / RETRIEVAL
-       |
-       v
-TOOLS / ENTERPRISE INTEGRATION
-       |
-       v
-CONTROL / AUTHORIZATION
-       |
-       v
-EVALUATION
-       |
-       v
-PRODUCTION ARCHITECTURE
-       |
-       v
-MODEL / ECONOMICS DECISION
-```
-
-The goal is not to add architectural complexity for its own sake.
-
-Each layer should address an observed enterprise requirement, failure mode, control boundary, or measurable operational concern.
-
----
-
-## Building an Enterprise AI Agent: Lessons from the Lab
-
-The repository supports an eight-part series documenting what is built, tested, and observed as the architecture evolves.
-
-### Part 1 — A Good LLM Answer Isn't Good Enough for the Enterprise
-
-Grounding, authority, and the difference between plausible recommendations and recommendations supported by authoritative enterprise information.
-
-### Part 2 — What Actually Happens When an AI Agent Calls a Tool?
-
-Agent runtime behavior, tool selection, tool execution, and the model/tool interaction loop.
-
-### Part 3 — Context Is an Architecture Problem, Not Just a Prompt Problem
-
-Retrieval, RAG, policies, provenance, freshness, and access boundaries.
-
-### Part 4 — How Does an AI Agent Actually Connect to the Enterprise?
-
-APIs, tools, MCP, enterprise systems, authentication, identity, data boundaries, and systems of record.
-
-### Part 5 — When Should an AI Agent Be Allowed to Act?
-
-Human approval, deterministic controls, authorization, read/write boundaries, and security.
-
-### Part 6 — How Do You Know an AI Agent Actually Works?
-
-Evaluations, test cases, traces, failure taxonomy, regression testing, model quality, and operational metrics.
-
-### Part 7 — From Prototype to Production: What Changes?
-
-Deployment architecture, observability, resilience, latency, security, auditability, scaling, and operational change.
-
-### Part 8 — OpenAI vs. Claude vs. Local Qwen: What Actually Matters in Enterprise Model Selection?
-
-Comparing models using the same workflow, policies, and evaluation framework across quality, tool behavior, latency, cost, control, and deployment options.
-
----
-
-## Evidence-First Approach
-
-The development approach for this lab is:
-
-> **BUILD → TEST → OBSERVE → DOCUMENT**
-
-Claims in the accompanying articles should correspond to something that has actually been:
-
-- implemented
-- executed
-- tested
-- observed
-- measured
-
-Planned capabilities are identified as planned rather than presented as completed work.
-
-The repository may evolve ahead of the article series. Git history and evidence artifacts provide the technical record behind specific observations discussed in the articles.
-
-The Article 1 grounding experiment can be reproduced with:
-
-```text
-experiments/grounding_comparison.py
-```
-
-and its observed evidence is recorded in:
-
-```text
-evidence/article-01-grounding.md
-```
-
----
-
-## Enterprise Architecture Principle
-
-The central architectural idea explored by this project is that:
-
-> **The LLM is a component of the system, not the system itself.**
-
-A production enterprise AI architecture may ultimately need to coordinate:
-
-```text
-Enterprise Application
-        |
-        v
-API / Orchestration Layer
-        |
-        v
-Agent Runtime
-        |
-        v
-Model
-        |
-        +--------------------+
-        |                    |
-        v                    v
-Context / Retrieval       Tool Gateway
-                              |
-                              v
-                       Enterprise APIs
-                              |
-                              v
-                       Systems of Record
-```
-
-with cross-cutting concerns including:
-
-```text
-Identity
-Authentication
-Authorization
-Security
-Data Boundaries
-Policy
-Human Approval
-Evaluation
-Tracing
-Observability
-Audit
-Cost
-Latency
-Reliability
-```
-
-This repository will progressively explore those concerns rather than assuming the model alone solves them.
+Those are deeper architectural problems that should be introduced only when the lab reaches the problem they are intended to solve.
 
 ---
 
