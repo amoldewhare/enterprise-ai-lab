@@ -2,6 +2,7 @@ from agents import Agent, Runner
 
 from app.workflow.review_result import TransferReviewResult
 from app.tools.transfer_policy import search_transfer_policies
+from app.tools.account_lookup import get_account
 from models.base import ModelProvider
 
 
@@ -10,7 +11,7 @@ class OpenAIProvider(ModelProvider):
     def __init__(self, agent_tools=None):
 
         if agent_tools is None:
-            agent_tools = [search_transfer_policies]
+            agent_tools = [search_transfer_policies, get_account]
 
 
         self.agent = Agent(
